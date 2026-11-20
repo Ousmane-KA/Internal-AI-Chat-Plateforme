@@ -206,6 +206,10 @@ Verify the installed model:
 ```bash
 docker exec -it ollama ollama list
 ```
+---
+<img width="1012" height="166" alt="image" src="https://github.com/user-attachments/assets/4fc1b2f2-033f-4d37-b5a9-eca260537ae3" />
+
+---
 
 Optional: Test the model directly from the terminal:
 
