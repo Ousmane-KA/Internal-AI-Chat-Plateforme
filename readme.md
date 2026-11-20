@@ -1,1241 +1,442 @@
-# Internal AI Chat Platform
+# Local LLM Lab – Docker Deployment
 
-An enterprise-ready internal AI chat platform built around **Open WebUI**.
+## 1. Overview
 
-The goal of this project is to provide employees with a secure, centralized AI assistant that can connect to cloud-based AI models, local models, and internal company knowledge.
+This project provides a lightweight, self-hosted Large Language Model (LLM) environment running on a Linux virtual machine using Docker.
 
----
+The objective is to deploy a local AI assistant with a web-based conversational interface, similar to ChatGPT, without relying on external AI APIs or cloud-based LLM services.
 
-## 📋 Table of Contents
+The solution is designed for laboratory, testing, and learning purposes, with limited hardware resources.
 
-* [Overview](#-overview)
-* [Architecture](#-architecture)
-* [Features](#-features)
-* [Technology Stack](#-technology-stack)
-* [Requirements](#-requirements)
-* [Installation](#-installation)
-* [Docker Installation](#-docker-installation)
-* [Docker Compose](#-docker-compose)
-* [Configuration](#-configuration)
-* [OpenAI Integration](#-openai-integration)
-* [Ollama Integration](#-ollama-integration)
-* [Internal Knowledge & RAG](#-internal-knowledge--rag)
-* [Authentication](#-authentication)
-* [Security](#-security)
-* [HTTPS & Reverse Proxy](#-https--reverse-proxy)
-* [Backups](#-backups)
-* [Updates](#-updates)
-* [Monitoring](#-monitoring)
-* [Production Architecture](#-production-architecture)
-* [Recommended Roadmap](#-recommended-roadmap)
-* [Troubleshooting](#-troubleshooting)
-* [Project Structure](#-project-structure)
-* [License](#-license)
+### Main Components
 
----
+- **Ollama:** Runs and manages local Large Language Models.
+- **Open WebUI:** Provides a web-based conversational interface.
+- **Docker Compose:** Manages and orchestrates the containers.
 
-# 🚀 Overview
-
-This project provides a private AI chat environment for internal company use.
-
-Employees can access a ChatGPT-like interface from their browser and interact with AI models approved by the organization.
-
-The platform can be configured to use:
-
-* Cloud AI providers such as OpenAI
-* Local AI models through Ollama
-* Internal company documents
-* Retrieval-Augmented Generation (RAG)
-* Enterprise authentication
-* Internal APIs and business applications
-
-The platform is designed to be deployed on the company's own infrastructure.
-
----
-
-# 🏗️ Architecture
-
-The recommended architecture is a hybrid setup combining Open WebUI, cloud AI models, local models, and internal company knowledge.
+## 2. Architecture
 
 ```text
-                         ┌───────────────────┐
-                         │     Employees     │
-                         └─────────┬─────────┘
-                                   │
-                                   │ HTTPS
-                                   ▼
-                         ┌───────────────────┐
-                         │ Authentication    │
-                         │ SSO / LDAP / OIDC │
-                         └─────────┬─────────┘
-                                   │
-                                   ▼
-                         ┌───────────────────┐
-                         │  Reverse Proxy    │
-                         │ Nginx / Traefik   │
-                         └─────────┬─────────┘
-                                   │
-                                   ▼
-                         ┌───────────────────┐
-                         │    Open WebUI     │
-                         │                   │
-                         │ Chat              │
-                         │ Users             │
-                         │ Documents         │
-                         │ RAG               │
-                         └───────┬───┬───────┘
-                                 │   │
-                    ┌────────────┘   └────────────┐
-                    ▼                             ▼
-           ┌─────────────────┐           ┌─────────────────┐
-           │    OpenAI API   │           │     Ollama      │
-           │      Cloud      │           │      Local      │
-           └─────────────────┘           └────────┬────────┘
-                                                   │
-                                                   ▼
-                                          ┌─────────────────┐
-                                          │ Local AI Models │
-                                          └─────────────────┘
-
-                         Internal Knowledge
-                                │
-                                ▼
-                         ┌─────────────────┐
-                         │       RAG       │
-                         │ Vector Database │
-                         └─────────────────┘
-                                │
-                                ▼
-                         Company Documents
+                  User Browser
+                       |
+                       |
+                  HTTP :3000
+                       |
+                       v
+              +------------------+
+              |    Open WebUI    |
+              |  Chat Interface  |
+              +------------------+
+                       |
+                       | Docker Network
+                       |
+                       v
+              +------------------+
+              |      Ollama      |
+              |   LLM Runtime    |
+              +------------------+
+                       |
+                       v
+              +------------------+
+              |  Qwen 2.5 1.5B   |
+              |   Local Model    |
+              +------------------+
 ```
 
----
+All components run locally on the Linux virtual machine.
 
-# ✨ Features
+## 3. Technical Requirements
 
-## AI Chat
+### Recommended VM Configuration
 
-* Chat with approved AI models
-* Multiple models/providers
-* Conversation history
-* Streaming responses
-* Model selection
+| Resource | Configuration |
+|---|---|
+| Operating System | Ubuntu Server 22.04 / 24.04 |
+| CPU | 2 vCPUs |
+| RAM | 4 GB minimum |
+| Storage | 25 GB |
+| GPU | Not required |
+| Container Runtime | Docker |
+| Orchestration | Docker Compose |
 
-## Internal Knowledge
+**Note:** Performance depends on available CPU resources, RAM, model size, and the number of simultaneous users. A small quantized model is recommended for low-resource environments.
 
-The platform can be connected to internal documentation such as:
+## 4. Software Stack
 
-* PDF files
-* Word documents
-* Excel files
-* Procedures
-* Product documentation
-* Internal FAQs
-* Technical documentation
-* HR documentation
+| Component | Description |
+|---|---|
+| Docker Engine | Container runtime |
+| Docker Compose | Container orchestration |
+| Ollama | Local LLM inference engine |
+| Open WebUI | Web-based AI interface |
+| Qwen 2.5 1.5B | Lightweight language model |
 
-## RAG
+## 5. Installation
 
-Retrieval-Augmented Generation allows the AI to retrieve relevant information from internal company documents before generating an answer.
-
-## Enterprise Authentication
-
-The platform can be integrated with enterprise identity systems such as:
-
-* Microsoft Entra ID
-* Active Directory
-* LDAP
-* OIDC
-* SSO
-
-## Local AI
-
-Sensitive workloads can be processed locally using Ollama and compatible open-source models.
-
-## Hybrid AI
-
-Different models can be used depending on the task:
-
-```text
-Sensitive data
-      ↓
-Local model
-
-Complex reasoning
-      ↓
-Cloud model
-
-Internal documentation
-      ↓
-RAG
-```
-
----
-
-# 🧰 Technology Stack
-
-| Component               | Technology                                      |
-| ----------------------- | ----------------------------------------------- |
-| Web UI                  | Open WebUI                                      |
-| Containerization        | Docker                                          |
-| Container orchestration | Docker Compose                                  |
-| Cloud AI                | OpenAI API                                      |
-| Local AI                | Ollama                                          |
-| Database                | Open WebUI / PostgreSQL depending on deployment |
-| RAG                     | Open WebUI knowledge/RAG system                 |
-| Reverse Proxy           | Nginx / Traefik / Caddy                         |
-| Authentication          | OIDC / LDAP / SSO                               |
-| Operating System        | Ubuntu Server recommended                       |
-
----
-
-# 💻 Requirements
-
-## Minimum Development Environment
-
-```text
-CPU:       4 cores
-RAM:       8 GB
-Storage:   100 GB SSD
-OS:        Ubuntu 22.04+ / Ubuntu 24.04+
-Docker:    Latest stable version
-```
-
-## Recommended Production Environment
-
-```text
-CPU:       8+ cores
-RAM:       32 GB+
-Storage:   500 GB+ SSD
-Network:   1 Gbps
-GPU:       Optional
-OS:        Ubuntu Server 24.04 LTS
-```
-
-GPU requirements depend on the local AI models being used.
-
----
-
-# 🐳 Installation
-
-## 1. Install Docker
-
-On Ubuntu:
+### Step 1 – Update the Linux System
 
 ```bash
-sudo apt update
-sudo apt upgrade -y
+sudo apt update && sudo apt upgrade -y
 ```
 
-Install Docker:
+Install the required packages:
 
 ```bash
-sudo apt install docker.io docker-compose-plugin -y
+sudo apt install -y ca-certificates curl openssl
 ```
 
-Verify:
+### Step 2 – Install Docker
+
+Install Docker using the official installation script:
+
+```bash
+curl -fsSL https://get.docker.com | sudo sh
+```
+
+Enable and start Docker:
+
+```bash
+sudo systemctl enable --now docker
+```
+
+Install Docker Compose:
+
+```bash
+sudo apt install -y docker-compose-plugin
+```
+
+Verify the installation:
 
 ```bash
 docker --version
 docker compose version
 ```
 
-Test Docker:
+### Step 3 – Create the Project Directory
 
 ```bash
-sudo docker run hello-world
+sudo mkdir -p /opt/llm-lab
+sudo chown -R $USER:$USER /opt/llm-lab
+
+cd /opt/llm-lab
 ```
 
----
+### Step 4 – Generate the WebUI Secret Key
 
-# 🐳 Docker Installation
-
-Create a dedicated directory:
+Generate a secure application secret:
 
 ```bash
-sudo mkdir -p /opt/open-webui
-cd /opt/open-webui
+openssl rand -hex 32
 ```
 
-Run Open WebUI:
+Keep this value for the Docker Compose configuration.
+
+### Step 5 – Create the Docker Compose File
+
+Create the configuration file:
 
 ```bash
-docker run -d \
-  -p 3000:8080 \
-  --add-host=host.docker.internal:host-gateway \
-  -v open-webui:/app/backend/data \
-  -e WEBUI_SECRET_KEY="$(openssl rand -hex 32)" \
-  --name open-webui \
-  --restart always \
-  ghcr.io/open-webui/open-webui:main
+nano docker-compose.yml
 ```
 
-Check the container:
-
-```bash
-docker ps
-```
-
-View logs:
-
-```bash
-docker logs -f open-webui
-```
-
-Open the application:
-
-```text
-http://SERVER_IP:3000
-```
-
----
-
-# 🐙 Docker Compose
-
-For production environments, Docker Compose is recommended.
-
-Create:
-
-```text
-docker-compose.yml
-```
-
-Example:
+Add the following configuration:
 
 ```yaml
 services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - llm
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
-
     container_name: open-webui
-
     restart: unless-stopped
-
     ports:
       - "3000:8080"
-
-    volumes:
-      - open-webui:/app/backend/data
-
     environment:
-      WEBUI_SECRET_KEY: "CHANGE_THIS_TO_A_LONG_RANDOM_SECRET"
+      OLLAMA_BASE_URL: http://ollama:11434
+      WEBUI_SECRET_KEY: "REPLACE_WITH_GENERATED_SECRET"
+    volumes:
+      - webui_data:/app/backend/data
+    depends_on:
+      - ollama
+    networks:
+      - llm
 
 volumes:
-  open-webui:
+  ollama_data:
+  webui_data:
+
+networks:
+  llm:
+    driver: bridge
 ```
 
-Start the service:
+Replace `REPLACE_WITH_GENERATED_SECRET` with the secret generated previously.
+
+### Step 6 – Deploy the Containers
+
+Start the environment:
 
 ```bash
 docker compose up -d
 ```
 
-Check status:
+Check container status:
 
 ```bash
 docker compose ps
 ```
 
-View logs:
+Expected containers:
+
+- ollama
+- open-webui
+
+Check application logs:
 
 ```bash
 docker compose logs -f
 ```
 
-Stop the service:
+### Step 7 – Download the LLM Model
+
+Download a lightweight language model:
+
+```bash
+docker exec -it ollama ollama pull qwen2.5:1.5b
+```
+
+Verify the installed model:
+
+```bash
+docker exec -it ollama ollama list
+```
+
+Optional: Test the model directly from the terminal:
+
+```bash
+docker exec -it ollama ollama run qwen2.5:1.5b
+```
+
+## 6. Access the Web Interface
+
+Once the containers are running, access Open WebUI from a web browser:
+
+```text
+http://<LINUX_VM_IP>:3000
+```
+
+Example:
+
+```text
+http://192.168.1.100:3000
+```
+
+On the first connection:
+
+1. Open the WebUI URL.
+2. Create the initial administrator account.
+3. Log in to the application.
+4. Select the `qwen2.5:1.5b` model.
+5. Start a conversation with your local AI assistant.
+
+## 7. Model Management
+
+Ollama supports multiple models.
+
+Some lightweight models suitable for laboratory environments:
+
+| Model | Description |
+|---|---|
+| qwen2.5:0.5b | Very lightweight model |
+| qwen2.5:1.5b | Lightweight conversational model |
+| qwen2.5:3b | More capable model |
+| llama3.2:1b | Lightweight Meta model |
+
+Download another model:
+
+```bash
+docker exec -it ollama ollama pull llama3.2:1b
+```
+
+List installed models:
+
+```bash
+docker exec -it ollama ollama list
+```
+
+Remove a model:
+
+```bash
+docker exec -it ollama ollama rm llama3.2:1b
+```
+
+## 8. Container Management
+
+### Start the environment
+
+```bash
+cd /opt/llm-lab
+docker compose up -d
+```
+
+### Stop the environment
 
 ```bash
 docker compose down
 ```
 
----
-
-# ⚙️ Configuration
-
-After installation, access the administration interface.
-
-Typical administration areas include:
-
-```text
-Settings
- ├── General
- ├── Users
- ├── Models
- ├── Connections
- ├── Documents
- ├── Authentication
- └── Administration
-```
-
-The exact configuration options may vary depending on the Open WebUI version.
-
----
-
-# 🤖 OpenAI Integration
-
-Open WebUI can connect to OpenAI through its API.
-
-The standard API endpoint is:
-
-```text
-https://api.openai.com/v1
-```
-
-Configure the provider from the Open WebUI administration interface.
-
-Architecture:
-
-```text
-Employee
-   │
-   ▼
-Open WebUI
-   │
-   ▼
-OpenAI API
-   │
-   ▼
-AI Model
-```
-
-The API key should never be hard-coded into source code or committed to Git.
-
-Use a secure secret-management mechanism where possible.
-
----
-
-# 🧠 Ollama Integration
-
-Ollama can be used to run AI models locally.
-
-Architecture:
-
-```text
-Open WebUI
-     │
-     ▼
-   Ollama
-     │
-     ▼
-Local AI Model
-```
-
-Example deployment:
-
-```text
-Server 1
-──────────────
-Open WebUI
-192.168.10.10
-
-        │
-        │ Internal network
-        ▼
-
-Server 2
-──────────────
-Ollama
-192.168.10.20
-```
-
-Open WebUI can then connect to the Ollama server.
-
-The Ollama endpoint is typically:
-
-```text
-http://192.168.10.20:11434
-```
-
-Do not expose the Ollama API directly to the public Internet.
-
----
-
-# 📚 Internal Knowledge & RAG
-
-RAG allows employees to ask questions about internal company information.
-
-Example document structure:
-
-```text
-company-documents/
-├── HR/
-│   ├── procedures/
-│   └── policies/
-│
-├── IT/
-│   ├── documentation/
-│   └── troubleshooting/
-│
-├── Finance/
-│   └── procedures/
-│
-├── Sales/
-│   └── products/
-│
-└── Management/
-    └── reports/
-```
-
-The documents are processed and indexed so that relevant information can be retrieved when a user asks a question.
-
-Example:
-
-```text
-User:
-"What is the procedure for requesting vacation?"
-
-       ↓
-
-RAG Search
-
-       ↓
-
-Relevant company document
-
-       ↓
-
-AI Model
-
-       ↓
-
-Answer
-```
-
----
-
-# 🔐 Document Permissions
-
-Document permissions are critical in an enterprise environment.
-
-Sensitive documents should not be available to every user.
-
-Example:
-
-```text
-HR
- ├── HR Group
- └── Management Group
-
-Finance
- └── Finance Group
-
-Sales
- └── Sales Group
-
-IT
- └── IT Group
-```
-
-A sales employee should not automatically be able to search HR or payroll documents.
-
-Access-control policies must therefore be designed before importing sensitive company data.
-
----
-
-# 👥 Authentication
-
-For production use, authentication should be enabled.
-
-Recommended architecture:
-
-```text
-Employee
-    │
-    ▼
-Corporate Identity Provider
-    │
-    ▼
-SSO / OIDC
-    │
-    ▼
-Open WebUI
-```
-
-Possible identity providers include:
-
-* Microsoft Entra ID
-* Active Directory
-* LDAP
-* OIDC-compatible identity providers
-
-The preferred solution depends on the company's existing identity infrastructure.
-
----
-
-# 🔒 Security
-
-Security should be treated as a core requirement.
-
-## Network Security
-
-Recommended:
-
-```text
-Internet
-   X
-   │
-Firewall
-   │
-   ▼
-Internal Network
-   │
-   ▼
-Reverse Proxy
-   │
-   ▼
-Open WebUI
-```
-
-Do not expose these services directly to the public Internet:
-
-```text
-Ollama
-PostgreSQL
-Internal APIs
-Vector databases
-```
-
----
-
-# 🔑 Secrets
-
-Never commit secrets to Git.
-
-Do not store:
-
-```text
-OPENAI_API_KEY=...
-```
-
-inside a public repository.
-
-Use:
-
-* Environment variables
-* Docker secrets
-* Vault
-* Cloud secret managers
-* Enterprise secret-management systems
-
----
-
-# 🌐 HTTPS & Reverse Proxy
-
-For production, Open WebUI should be served over HTTPS.
-
-Example:
-
-```text
-https://ai.company.com
-```
-
-Architecture:
-
-```text
-Employee
-   │
-   │ HTTPS
-   ▼
-Nginx / Traefik
-   │
-   │ HTTP
-   ▼
-Open WebUI :3000
-```
-
-The reverse proxy should handle:
-
-* TLS certificates
-* HTTPS redirection
-* Security headers
-* Access control
-* Optional rate limiting
-
----
-
-# 💾 Backups
-
-The Open WebUI data directory must be backed up.
-
-Docker volume:
-
-```text
-open-webui
-```
-
-Example backup:
+### Restart the environment
 
 ```bash
-docker run --rm \
-  -v open-webui:/data \
-  -v /backup:/backup \
-  ubuntu \
-  tar czf /backup/open-webui-$(date +%Y-%m-%d).tar.gz /data
+docker compose restart
 ```
 
-Recommended backup strategy:
-
-```text
-Daily backups
-     │
-     ├── 7 daily backups
-     │
-     └── Weekly backups
-             │
-             └── 4 weekly backups
-```
-
-A secondary backup location is strongly recommended.
-
----
-
-# 🔄 Updates
-
-Before updating, create a backup.
-
-Pull the latest image:
-
-```bash
-docker compose pull
-```
-
-Restart:
-
-```bash
-docker compose up -d
-```
-
-Check:
+### Display container status
 
 ```bash
 docker compose ps
 ```
 
-Check logs:
+### View logs
 
 ```bash
-docker compose logs -f
+docker compose logs -f ollama
+docker compose logs -f open-webui
 ```
 
-Production environments should ideally use a staging environment before updating production.
+### Update container images
 
----
-
-# 📊 Monitoring
-
-Monitor at least:
-
-```text
-CPU
-RAM
-Disk
-Network
-Docker containers
-Open WebUI
-Ollama
-GPU
-Database
+```bash
+docker compose pull
+docker compose up -d
 ```
 
-Recommended alerts:
+**Important:** The `main` image tag is mutable. For a more stable laboratory deployment, consider pinning tested image versions.
 
-```text
-Disk usage > 80%
-RAM usage > 90%
-Container stopped
-API errors
-Database unavailable
-GPU temperature too high
+## 9. Data Persistence
+
+Docker volumes are used to preserve application data.
+
+| Volume | Purpose |
+|---|---|
+| ollama_data | Stores downloaded LLM models |
+| webui_data | Stores Open WebUI configuration and conversation data |
+
+List Docker volumes:
+
+```bash
+docker volume ls
 ```
 
----
+Inspect a volume:
 
-# 🏢 Production Architecture
-
-Recommended production architecture:
-
-```text
-                         ┌─────────────────┐
-                         │    Employees    │
-                         └────────┬────────┘
-                                  │
-                                  ▼
-                         ┌─────────────────┐
-                         │ SSO / Identity  │
-                         └────────┬────────┘
-                                  │
-                                  ▼
-                         ┌─────────────────┐
-                         │ Reverse Proxy   │
-                         │ HTTPS           │
-                         └────────┬────────┘
-                                  │
-                                  ▼
-                         ┌─────────────────┐
-                         │    Open WebUI   │
-                         └───────┬─┬───────┘
-                                 │ │
-                   ┌─────────────┘ └─────────────┐
-                   ▼                             ▼
-          ┌─────────────────┐           ┌─────────────────┐
-          │    OpenAI API   │           │     Ollama      │
-          │      Cloud      │           │      Local      │
-          └─────────────────┘           └────────┬────────┘
-                                                  │
-                                                  ▼
-                                         ┌─────────────────┐
-                                         │ Local AI Models │
-                                         └─────────────────┘
-
-                    Internal Documents
-                            │
-                            ▼
-                    ┌─────────────────┐
-                    │      RAG        │
-                    └─────────────────┘
+```bash
+docker volume inspect llm-lab_ollama_data
 ```
 
----
+Data is preserved when containers are stopped or recreated.
 
-# 🛡️ Recommended Firewall Rules
+**Warning:** Running `docker compose down -v` deletes the associated volumes and their data. Avoid this command unless you intend to remove all persistent data.
 
-Example:
+## 10. Network and Security Considerations
 
-| Source     | Destination |    Port | Action |
-| ---------- | ----------- | ------: | ------ |
-| Users      | Open WebUI  |     443 | Allow  |
-| Open WebUI | Ollama      |   11434 | Allow  |
-| Open WebUI | Database    | DB port | Allow  |
-| Users      | Database    | DB port | Deny   |
-| Internet   | Ollama      |   11434 | Deny   |
-| Internet   | Database    | DB port | Deny   |
+For a laboratory environment:
 
-These rules are examples and must be adapted to the company's network architecture.
+- Restrict access to TCP port 3000 to trusted network clients.
+- Do not expose Ollama port 11434 directly to the network.
+- Use strong administrator credentials.
+- Keep Docker images and the Linux operating system updated.
+- Back up Docker volumes regularly.
+- Use HTTPS through a reverse proxy if the interface needs to be accessed beyond a trusted local network.
 
----
+The application is intended for internal laboratory usage and should not be exposed directly to the public Internet without additional security controls.
 
-# 🧪 Development / Staging / Production
+## 11. Troubleshooting
 
-It is recommended to maintain separate environments.
-
-```text
-Development
-     │
-     ▼
-Staging
-     │
-     ▼
-Production
-```
-
-Example:
-
-```text
-ai-dev.company.local
-ai-staging.company.local
-ai.company.com
-```
-
-Never test experimental configurations directly in production.
-
----
-
-# 🗺️ Recommended Roadmap
-
-## Phase 1 — Proof of Concept
-
-```text
-Docker
-  ↓
-Open WebUI
-  ↓
-OpenAI
-```
-
-Goal: validate the AI chat experience.
-
----
-
-## Phase 2 — Authentication
-
-```text
-Open WebUI
-  +
-SSO
-  +
-Users
-  +
-Groups
-```
-
----
-
-## Phase 3 — Internal Knowledge
-
-```text
-PDF
-Word
-Excel
-Procedures
-     ↓
-RAG
-     ↓
-AI
-```
-
----
-
-## Phase 4 — Security
-
-```text
-HTTPS
-Firewall
-SSO
-Backups
-Monitoring
-```
-
----
-
-## Phase 5 — Local AI
-
-```text
-Open WebUI
-     ↓
-Ollama
-     ↓
-Local Models
-```
-
----
-
-## Phase 6 — Business Integrations
-
-The AI platform can later be connected to internal applications through APIs.
-
-Potential integrations:
-
-```text
-ERP
-CRM
-HR
-Ticketing
-SharePoint
-Databases
-Internal APIs
-```
-
-Example:
-
-```text
-User
-  │
-  ▼
-AI Assistant
-  │
-  ▼
-Internal API
-  │
-  ▼
-ERP / CRM
-  │
-  ▼
-Result
-  │
-  ▼
-AI Response
-```
-
----
-
-# 🧩 Example Use Cases
-
-## HR
-
-> "What is the procedure for requesting vacation?"
-
-## IT
-
-> "How do I configure the corporate VPN?"
-
-## Sales
-
-> "Summarize the documentation for Product X."
-
-## Management
-
-> "Summarize this month's reports."
-
-## Support
-
-> "Find the procedure corresponding to this error."
-
----
-
-# ⚠️ AI Usage Policy
-
-The internal AI assistant should not be considered an autonomous decision-making system.
-
-Users should verify AI-generated information before using it for important decisions.
-
-The system should not be used to:
-
-* Share passwords
-* Share authentication tokens
-* Store secrets
-* Make unreviewed HR decisions
-* Make final legal decisions
-* Make final financial decisions
-* Process sensitive information without authorization
-
-The company should define its own AI governance and data-handling policy.
-
----
-
-# 🔧 Troubleshooting
-
-## Open WebUI is not accessible
+### Open WebUI is unavailable
 
 Check the container:
 
 ```bash
 docker ps
-```
-
-Check logs:
-
-```bash
 docker logs open-webui
 ```
 
-Check port:
+Restart the service:
 
 ```bash
-sudo ss -tulpn | grep 3000
+docker compose restart open-webui
 ```
 
----
+### Ollama is unavailable
 
-## Container keeps restarting
-
-Check:
+Check Ollama logs:
 
 ```bash
-docker logs open-webui
+docker logs ollama
 ```
 
-Check disk space:
+Check installed models:
 
 ```bash
-df -h
+docker exec -it ollama ollama list
 ```
 
-Check Docker:
+### Model download issues
+
+Retry the download:
 
 ```bash
-systemctl status docker
+docker exec -it ollama ollama pull qwen2.5:1.5b
 ```
 
----
+### Insufficient memory
 
-## Ollama connection fails
+If the VM runs out of memory:
 
-Check that Ollama is running:
+- Stop unnecessary services.
+- Use a smaller model such as `qwen2.5:0.5b`.
+- Reduce the model context length if needed.
+- Monitor system resources:
 
 ```bash
-curl http://OLLAMA_SERVER:11434
+free -h
+docker stats
 ```
 
-Check network connectivity:
+## 12. Future Improvements
 
-```bash
-ping OLLAMA_SERVER
-```
+Possible extensions for this laboratory environment:
 
-Check firewall rules.
+- Deploy additional LLM models.
+- Integrate document-based question answering (RAG).
+- Enable PDF and Word document analysis.
+- Configure HTTPS with Nginx or Traefik.
+- Add authentication and multi-user access.
+- Integrate an internal knowledge base.
+- Experiment with different model sizes and inference performance.
 
----
+## 13. References
 
-# 📁 Project Structure
-
-A possible repository structure:
-
-```text
-internal-ai-chat/
-│
-├── README.md
-│
-├── docker/
-│   ├── docker-compose.yml
-│   └── .env.example
-│
-├── nginx/
-│   └── nginx.conf
-│
-├── scripts/
-│   ├── backup.sh
-│   ├── restore.sh
-│   └── update.sh
-│
-├── docs/
-│   ├── architecture.md
-│   ├── security.md
-│   ├── deployment.md
-│   └── operations.md
-│
-└── backups/
-```
+- Ollama: https://ollama.com/
+- Ollama Documentation: https://docs.ollama.com/
+- Open WebUI: https://openwebui.com/
+- Open WebUI Documentation: https://docs.openwebui.com/
+- Docker Documentation: https://docs.docker.com/
+- Docker Compose: https://docs.docker.com/compose/
 
 ---
 
-# 📌 Production Checklist
-
-## Infrastructure
-
-* [ ] Server configured
-* [ ] Docker installed
-* [ ] Storage configured
-* [ ] Backup configured
-* [ ] Monitoring configured
-
-## Open WebUI
-
-* [ ] Open WebUI deployed
-* [ ] Persistent volume configured
-* [ ] Secret key configured
-* [ ] Administrator account created
-* [ ] AI provider configured
-
-## Authentication
-
-* [ ] SSO configured
-* [ ] User groups configured
-* [ ] Administrator access restricted
-
-## Security
-
-* [ ] HTTPS enabled
-* [ ] Firewall configured
-* [ ] Ollama not publicly exposed
-* [ ] Database not publicly exposed
-* [ ] Secrets protected
-* [ ] Backups encrypted if required
-
-## AI
-
-* [ ] Primary model configured
-* [ ] Secondary model configured
-* [ ] RAG configured
-* [ ] Documents indexed
-* [ ] Document permissions reviewed
-
-## Operations
-
-* [ ] Backup procedure documented
-* [ ] Restore procedure tested
-* [ ] Update procedure documented
-* [ ] Monitoring enabled
-* [ ] Incident procedure documented
-
----
-
-# 🎯 Final Recommended Architecture
-
-For a serious internal deployment, the recommended target architecture is:
-
-```text
-                    ┌─────────────────────┐
-                    │     Employees       │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │ Corporate SSO       │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │ Reverse Proxy       │
-                    │ HTTPS               │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │     Open WebUI      │
-                    │                     │
-                    │ Chat                │
-                    │ Users               │
-                    │ Models              │
-                    │ Knowledge           │
-                    │ RAG                 │
-                    └───────┬─────┬───────┘
-                            │     │
-                 ┌──────────┘     └──────────┐
-                 ▼                           ▼
-        ┌─────────────────┐         ┌─────────────────┐
-        │   OpenAI API    │         │     Ollama      │
-        │      Cloud      │         │      Local      │
-        └─────────────────┘         └────────┬────────┘
-                                             │
-                                             ▼
-                                    ┌─────────────────┐
-                                    │ Local AI Models │
-                                    └─────────────────┘
-
-                         ┌─────────────────────┐
-                         │ Internal Documents  │
-                         └──────────┬──────────┘
-                                    │
-                                    ▼
-                         ┌─────────────────────┐
-                         │       RAG           │
-                         │ Vector Search       │
-                         └─────────────────────┘
-```
-
----
-
-# 📚 Documentation
-
-Official Open WebUI documentation:
-
-* [Open WebUI Documentation](https://docs.openwebui.com/)
-* [Quick Start](https://docs.openwebui.com/getting-started/quick-start/)
-* [Providers](https://docs.openwebui.com/getting-started/quick-start/connect-a-provider/)
-* [OpenAI Integration](https://docs.openwebui.com/getting-started/quick-start/connect-a-provider/starting-with-openai/)
-* [Ollama Integration](https://docs.openwebui.com/getting-started/quick-start/connect-a-provider/starting-with-ollama/)
-
----
-
-# 📄 License
-
-This repository contains the deployment and configuration documentation for the internal AI platform.
-
-Open WebUI and the other components used by the deployment are subject to their respective licenses.
-
-Before deploying in a commercial environment, review the license terms of every component and AI model being used.
-
----
-
-# 👥 Project Ownership
-
-**Project:** Internal AI Chat Platform
-
-**Purpose:** Secure enterprise AI assistant
-
-**Primary Interface:** Open WebUI
-
-**Deployment:** Docker / Docker Compose
-
-**AI Providers:** OpenAI / Ollama
-
-**Environment:** Internal Enterprise Infrastructure
-
----
-
-## Status
-
-🚧 **Project Status: In Development**
-
-The production architecture should be validated by the organization's IT, security, and compliance teams before deployment.
+**Project:** Local LLM Lab  
+**Deployment:** Docker Compose  
+**Environment:** Linux Virtual Machine  
+**Purpose:** Local AI experimentation and learning  
+**LLM Runtime:** Ollama  
+**Web Interface:** Open WebUI
