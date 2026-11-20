@@ -239,6 +239,16 @@ On the first connection:
 4. Select the `qwen2.5:1.5b` model.
 5. Start a conversation with your local AI assistant.
 
+
+---
+<img width="1047" height="443" alt="image" src="https://github.com/user-attachments/assets/ecf3ec7c-e827-43f7-9c61-7d004cfc60a0" />
+
+---
+---
+<img width="1707" height="867" alt="image" src="https://github.com/user-attachments/assets/16ea0528-3e74-4cd8-adbe-39d9d31d61e4" />
+
+---
+
 ## 7. Model Management
 
 Ollama supports multiple models.
