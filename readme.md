@@ -8,6 +8,7 @@ The objective is to deploy a local AI assistant with a web-based conversational 
 
 The solution is designed for laboratory, testing, and learning purposes, with limited hardware resources.
 
+
 ### Main Components
 
 - **Ollama:** Runs and manages local Large Language Models.
@@ -16,32 +17,9 @@ The solution is designed for laboratory, testing, and learning purposes, with li
 
 ## 2. Architecture
 
-```text
-                  User Browser
-                       |
-                       |
-                  HTTP :3000
-                       |
-                       v
-              +------------------+
-              |    Open WebUI    |
-              |  Chat Interface  |
-              +------------------+
-                       |
-                       | Docker Network
-                       |
-                       v
-              +------------------+
-              |      Ollama      |
-              |   LLM Runtime    |
-              +------------------+
-                       |
-                       v
-              +------------------+
-              |  Qwen 2.5 1.5B   |
-              |   Local Model    |
-              +------------------+
-```
+
+<img width="1408" height="768" alt="llm-chat-ai" src="https://github.com/user-attachments/assets/2c09e754-4466-4442-9a82-a90adb12a368" />
+
 
 All components run locally on the Linux virtual machine.
 
