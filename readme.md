@@ -197,6 +197,10 @@ Download a lightweight language model:
 docker exec -it ollama ollama pull qwen2.5:1.5b
 ```
 
+---
+<img width="1481" height="172" alt="image" src="https://github.com/user-attachments/assets/18be6009-fa6e-4c3a-a472-fcb79094300b" />
+
+---
 Verify the installed model:
 
 ```bash
