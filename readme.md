@@ -89,7 +89,10 @@ Verify the installation:
 docker --version
 docker compose version
 ```
+---
+<img width="1058" height="216" alt="image" src="https://github.com/user-attachments/assets/53608727-d0eb-4d2f-8a64-d9999693730b" />
 
+---
 ### Step 3 – Create the Project Directory
 
 ```bash
