@@ -176,6 +176,10 @@ docker compose ps
 
 Expected containers:
 
+---
+<img width="1480" height="481" alt="image" src="https://github.com/user-attachments/assets/923d520f-a89c-4e32-8fff-37053d76e87c" />
+
+---
 - ollama
 - open-webui
 
